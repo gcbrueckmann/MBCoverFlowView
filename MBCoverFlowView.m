@@ -32,14 +32,14 @@
 #import <QuartzCore/QuartzCore.h>
 
 // Constants
-#define MBCoverFlowViewCellSpacing ([self itemSize].width/10)
+#define MBCoverFlowViewCellSpacing ([self itemSize].width/10.0)
 
-const float MBCoverFlowViewPlaceholderHeight = 600;
+const float MBCoverFlowViewPlaceholderHeight = 600.0;
 
 const float MBCoverFlowViewTopMargin = 30.0;
 const float MBCoverFlowViewBottomMargin = 20.0;
 const float MBCoverFlowViewHorizontalMargin = 12.0;
-#define MBCoverFlowViewContainerMinY (NSMaxY([self.accessoryController.view frame]) - 3*[self itemSize].height/4)
+#define MBCoverFlowViewContainerMinY (self.accessoryController?NSMaxY([self.accessoryController.view frame]):0.0 - 3.0*[self itemSize].height/4.0)
 
 const float MBCoverFlowScrollerHorizontalMargin = 80.0;
 const float MBCoverFlowScrollerVerticalSpacing = 16.0;

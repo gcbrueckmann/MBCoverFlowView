@@ -685,6 +685,7 @@ static NSString *MBCoverFlowViewImagePathContext;
 	[imageLayer setBounds:frame];
 	imageLayer.contents = (id)_placeholderRef;
 	imageLayer.name = @"image";
+	imageLayer.contentsGravity = kCAGravityResizeAspect;
 	
 	[layer setBounds:frame];
 	[layer setValue:[NSNumber numberWithInteger:[[_scrollLayer sublayers] count]] forKey:@"index"];
@@ -698,6 +699,7 @@ static NSString *MBCoverFlowViewImagePathContext;
 	reflectionLayer.name = @"reflection";
 	reflectionLayer.transform = CATransform3DMakeScale(1, -1, 1);
 	reflectionLayer.contents = (id)_placeholderRef;
+	reflectionLayer.contentsGravity = kCAGravityResizeAspect;
 	[imageLayer addSublayer:reflectionLayer];
 	
 	CALayer *gradientLayer = [CALayer layer];

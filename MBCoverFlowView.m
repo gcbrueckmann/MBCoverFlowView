@@ -970,7 +970,7 @@ static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer)
 		// Create the perspective effect
 		if (index < self.selectionIndex) {
 			// Left
-			sublayer.anchorPoint = CGPointMake(0, 0.8);
+			sublayer.anchorPoint = CGPointMake(0, 0.5);
 			frame.origin.x += currentItemSize.width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(self.selectionIndex - index - MBCoverFlowViewPerspectiveRowScaleFactor);
 			imageLayer.transform = _leftTransform;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
@@ -979,7 +979,7 @@ static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer)
 			sublayer.zPosition = MBCoverFlowViewPerspectiveSidePosition - 0.1 * (self.selectionIndex - index);
 		} else if (index > self.selectionIndex) {
 			// Right
-			sublayer.anchorPoint = CGPointMake(1, 0.7);
+			sublayer.anchorPoint = CGPointMake(1, 0.5);
 			frame.origin.x -= currentItemSize.width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(index - self.selectionIndex - MBCoverFlowViewPerspectiveRowScaleFactor);
 			imageLayer.transform = _rightTransform;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;

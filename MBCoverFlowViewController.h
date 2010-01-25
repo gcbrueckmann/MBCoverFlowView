@@ -27,8 +27,13 @@
 #import <Cocoa/Cocoa.h>
 
 
-@interface MBCoverFlowViewController : NSViewController {
-	
+@interface MBCoverFlowViewController : NSViewController
+{
+	BOOL showsScroller;
+	BOOL showsAccessory;
 }
+
+@property BOOL showsScroller;
+@property BOOL showsAccessory;
 
 @end

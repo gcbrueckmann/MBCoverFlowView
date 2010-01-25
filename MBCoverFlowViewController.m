@@ -30,8 +30,8 @@
 
 @implementation MBCoverFlowViewController
 
-- (void)awakeFromNib
-{	
+- (NSViewController *)labelViewController
+{
 	NSViewController *labelViewController = [[NSViewController alloc] initWithNibName:nil bundle:nil];
 	NSTextField *label = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 10, 10)];
 	[label setBordered:NO];
@@ -50,11 +50,16 @@
 	[labelViewController setView:label];
 	[label bind:@"value" toObject:labelViewController withKeyPath:@"representedObject.name" options:nil];
 	[label release];
-	[(MBCoverFlowView *)self.view setAccessoryController:labelViewController];
-	[labelViewController release];
+		
+	return [labelViewController autorelease];
+}
+
+- (void)awakeFromNib
+{
+	self.showsScroller = YES;
+	self.showsAccessory = YES;
 	
 	[(MBCoverFlowView *)self.view setImageKeyPath:@"image"];
-	[(MBCoverFlowView *)self.view setShowsScrollbar:YES];
 	
 	[NSThread detachNewThreadSelector:@selector(loadImages) toTarget:self withObject:nil];
 }
@@ -85,6 +90,32 @@
 	}
 	
 	[pool release];
+}
+- (BOOL)showsScroller
+{
+	return showsScroller;
+}
+- (void)setShowsScroller:(BOOL)flag
+{
+	if(showsScroller == flag) return;
+	
+	showsScroller = flag;
+	[(MBCoverFlowView *)self.view setShowsScrollbar:showsScroller];
+}
+- (BOOL)showsAccessory
+{
+	return showsAccessory;
+}
+- (void)setShowsAccessory:(BOOL)flag
+{
+	if(showsAccessory == flag) return;
+	
+	showsAccessory = flag;
+	if(showsAccessory) {
+		[(MBCoverFlowView *)self.view setAccessoryController:[self labelViewController]];
+	} else {
+		[(MBCoverFlowView *)self.view setAccessoryController:nil];
+	}
 }
 
 @end

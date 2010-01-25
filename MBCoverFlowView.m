@@ -687,12 +687,13 @@ static BOOL drawBorderForDebug = NO;
 // add by masakih
 static inline CGFloat _MBCoverFlowViewContainerMinY(MBCoverFlowView *aView)
 {
-	CGFloat result = - 3.0*[aView itemSize].height/4.0;
+	CGFloat result = -[aView itemSize].height + MBCoverFlowViewBottomMargin;
 	if(aView.accessoryController) {
-		result += NSMaxY([aView.accessoryController.view frame])/4.0;
+		result += [aView.accessoryController.view frame].size.height;
 	}
 	if(aView.showsScrollbar) {
-		result += [aView->_scroller frame].size.height * 3.0;
+		result += [aView->_scroller frame].size.height;
+		result += MBCoverFlowScrollerVerticalSpacing;
 	}
 	return result;
 }

@@ -39,7 +39,10 @@ const float MBCoverFlowViewPlaceholderHeight = 600.0;
 const float MBCoverFlowViewTopMargin = 30.0;
 const float MBCoverFlowViewBottomMargin = 20.0;
 const float MBCoverFlowViewHorizontalMargin = 12.0;
-#define MBCoverFlowViewContainerMinY (self.accessoryController?NSMaxY([self.accessoryController.view frame]):0.0 - 3.0*[self itemSize].height/4.0)
+// change by masakih
+// #define MBCoverFlowViewContainerMinY (self.accessoryController?NSMaxY([self.accessoryController.view frame]):0.0 - 3.0*[self itemSize].height/4.0)
+static inline CGFloat _MBCoverFlowViewContainerMinY(MBCoverFlowView *view);
+#define MBCoverFlowViewContainerMinY _MBCoverFlowViewContainerMinY(self)
 
 const float MBCoverFlowScrollerHorizontalMargin = 80.0;
 const float MBCoverFlowScrollerVerticalSpacing = 16.0;
@@ -54,7 +57,7 @@ const float MBCoverFlowViewPerspectiveCenterPosition = 100.0;
 const float MBCoverFlowViewPerspectiveSidePosition = 0.0;
 const float MBCoverFlowViewPerspectiveSideSpacingFactor = 0.75;
 const float MBCoverFlowViewPerspectiveRowScaleFactor = 0.85;
-const float MBCoverFlowViewPerspectiveAngle = 0.79;
+const float MBCoverFlowViewPerspectiveAngle = 0.7;//0.79;
 
 // KVO
 static NSString *MBCoverFlowViewImagePathContext;
@@ -73,6 +76,13 @@ static NSString *MBCoverFlowViewImagePathContext;
 - (CALayer *)_layerForObject:(id)object;
 - (void)_recachePlaceholder;
 - (void)_setSelectionIndex:(NSInteger)index; // For two-way bindings
+
+// add by masakih
+- (void)recalcSubviewSize;
+static inline CALayer *_imageLayerForItemLayer(CALayer *itemLayer);
+static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer);
+
+static BOOL drawBorderForDebug = NO;
 @end
 
 
@@ -116,12 +126,15 @@ static NSString *MBCoverFlowViewImagePathContext;
 		[_scroller setKnobProportion:1.0];
 		[_scroller setAction:@selector(_scrollerChange:)];
 		[self addSubview:_scroller];
+		// add by masakih
+		[_scroller setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
+		[self addSubview:_scroller];
 		
-		_leftTransform = CATransform3DMakeRotation(-0.79, 0, -1, 0);
+		_leftTransform = CATransform3DMakeRotation(-MBCoverFlowViewPerspectiveAngle, 0, -1, 0);
 		_rightTransform = CATransform3DMakeRotation(MBCoverFlowViewPerspectiveAngle, 0, -1, 0);
-	
+		
 		_itemSize = NSMakeSize(MBCoverFlowViewDefaultItemWidth, MBCoverFlowViewDefaultItemHeight);
-	
+		
 		CALayer *rootLayer = [CALayer layer];
 		rootLayer.layoutManager = [CAConstraintLayoutManager layoutManager];
 		rootLayer.backgroundColor = CGColorGetConstantColor(kCGColorBlack);
@@ -131,8 +144,13 @@ static NSString *MBCoverFlowViewImagePathContext;
 		_containerLayer.name = @"body";
 		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMidX relativeTo:@"superlayer" attribute:kCAConstraintMidX]];
 		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintWidth relativeTo:@"superlayer" attribute:kCAConstraintWidth offset:-20]];
-		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY offset:MBCoverFlowViewContainerMinY]];
+		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY offset:10]];
 		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY offset:-10]];
+		// add by masakih
+		if(drawBorderForDebug) {
+			_containerLayer.borderWidth = 2;
+			_containerLayer.borderColor = CGColorGetConstantColor(kCGColorWhite);
+		}
 		[rootLayer addSublayer:_containerLayer];
 		
 		_scrollLayer = [CAScrollLayer layer];
@@ -344,10 +362,18 @@ static NSString *MBCoverFlowViewImagePathContext;
 
 - (void)viewWillMoveToSuperview:(NSView *)newSuperview
 {
-	[self resizeSubviewsWithOldSize:[self frame].size];
+//	[self resizeSubviewsWithOldSize:[self frame].size];
+	[self recalcSubviewSize];
 }
 
-- (void)resizeSubviewsWithOldSize:(NSSize)oldSize
+- (void)setFrame:(NSRect)newFrame
+{
+	[super setFrame:newFrame];
+//	[self recalcSubviewSize];
+	self.selectionIndex = self.selectionIndex;
+}
+//- (void)resizeSubviewsWithOldSize:(NSSize)oldSize
+- (void)recalcSubviewSize
 {
 	float accessoryY = MBCoverFlowScrollerVerticalSpacing;
 	
@@ -368,12 +394,6 @@ static NSString *MBCoverFlowViewImagePathContext;
 		[self.accessoryController.view setFrame:accessoryFrame];
 	}
 	
-	_containerLayer.constraints = nil;
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMidX relativeTo:@"superlayer" attribute:kCAConstraintMidX]];
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintWidth relativeTo:@"superlayer" attribute:kCAConstraintWidth offset:-20]];
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY offset:MBCoverFlowViewContainerMinY]];
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY offset:-10]];
-
 	self.selectionIndex = self.selectionIndex;
 }
 
@@ -471,7 +491,8 @@ static NSString *MBCoverFlowViewImagePathContext;
 - (void)setAutoresizesItems:(BOOL)flag
 {
 	_autoresizesItems = flag;
-	[self resizeSubviewsWithOldSize:[self frame].size];
+//	[self resizeSubviewsWithOldSize:[self frame].size];
+	[self recalcSubviewSize];
 }
 
 - (NSSize)itemSize
@@ -515,12 +536,6 @@ static NSString *MBCoverFlowViewImagePathContext;
 	_itemSize = newSize;
 	
 	// Update all the various constraints which depend on the item size
-	_containerLayer.constraints = nil;
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMidX relativeTo:@"superlayer" attribute:kCAConstraintMidX]];
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintWidth relativeTo:@"superlayer" attribute:kCAConstraintWidth offset:-20]];
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY offset:MBCoverFlowViewContainerMinY]];
-	[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY offset:-10]];
-	
 	_leftGradientLayer.constraints = nil;
 	[_leftGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMinX]];
 	[_leftGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
@@ -548,7 +563,8 @@ static NSString *MBCoverFlowViewImagePathContext;
 {
 	_showsScrollbar = flag;
 	[_scroller setHidden:!flag];
-	[self resizeSubviewsWithOldSize:[self frame].size];
+//	[self resizeSubviewsWithOldSize:[self frame].size];
+	[self recalcSubviewSize];
 }
 
 - (void)setAccessoryController:(NSViewController *)aController
@@ -564,15 +580,17 @@ static NSString *MBCoverFlowViewImagePathContext;
 		[self setNextResponder:nil];
 	}
 	
+	_accessoryController = [aController retain];
 	if (aController != nil) {
-		_accessoryController = [aController retain];
+		[self.accessoryController.view setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
 		[self addSubview:self.accessoryController.view];
 		[self.accessoryController setNextResponder:[self nextResponder]];
 		[self setNextResponder:self.accessoryController];
 		[self.accessoryController bind:@"representedObject" toObject:self withKeyPath:@"selectedObject" options:nil];
 	}
 	
-	[self resizeSubviewsWithOldSize:[self frame].size];
+//	[self resizeSubviewsWithOldSize:[self frame].size];
+	[self recalcSubviewSize];
 }
 
 #pragma mark Managing the Selection
@@ -658,7 +676,7 @@ static NSString *MBCoverFlowViewImagePathContext;
 	}
 	
 	CALayer *layer = [self _layerForObject:[self.content objectAtIndex:index]];
-	CALayer *imageLayer = [[layer sublayers] objectAtIndex:0];
+	CALayer *imageLayer = _imageLayerForItemLayer(layer);
 	
 	CGRect frame = [imageLayer convertRect:[imageLayer frame] toLayer:self.layer];
 	return NSRectFromCGRect(frame);
@@ -666,53 +684,87 @@ static NSString *MBCoverFlowViewImagePathContext;
 
 #pragma mark -
 #pragma mark Private Methods
-
+// add by masakih
+static inline CGFloat _MBCoverFlowViewContainerMinY(MBCoverFlowView *aView)
+{
+	CGFloat result = - 3.0*[aView itemSize].height/4.0;
+	if(aView.accessoryController) {
+		result += NSMaxY([aView.accessoryController.view frame])/4.0;
+	}
+	if(aView.showsScrollbar) {
+		result += [aView->_scroller frame].size.height * 3.0;
+	}
+	return result;
+}
+static inline CALayer *_imageLayerForItemLayer(CALayer *itemLayer)
+{
+	return [[itemLayer sublayers] objectAtIndex:0];
+}
+static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer)
+{
+	return [[itemLayer sublayers] objectAtIndex:1];
+}
 - (CALayer *)_insertLayerInScrollLayer
 {
 	/* this enables a perspective transform.  The value of zDistance
 	 affects the sharpness of the transform */
-	float zDistance = 420.;
+	float zDistance = 420;
 	CATransform3D sublayerTransform = CATransform3DIdentity; 
 	sublayerTransform.m34 = 1. / -zDistance;
 	
 	CALayer *layer = [CALayer layer];
-	CALayer *imageLayer = [CALayer layer];
-	
 	CGRect frame;
 	frame.origin = CGPointZero;
 	frame.size = NSSizeToCGSize([self itemSize]);
-	
-	[imageLayer setBounds:frame];
-	imageLayer.contents = (id)_placeholderRef;
-	imageLayer.name = @"image";
-	imageLayer.contentsGravity = kCAGravityResizeAspect;
-	
+	frame.size.height *= 2.0;
 	[layer setBounds:frame];
 	[layer setValue:[NSNumber numberWithInteger:[[_scrollLayer sublayers] count]] forKey:@"index"];
-	[layer setSublayers:[NSArray arrayWithObject:imageLayer]];
 	[layer setSublayerTransform:sublayerTransform];
 	[layer setValue:[NSNumber numberWithBool:NO] forKey:@"hasImage"];
+	layer.layoutManager = [CAConstraintLayoutManager layoutManager];	
+	
+	CALayer *imageLayer = [CALayer layer];
+	[imageLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMidY]];
+	[imageLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY]];
+	[imageLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMinX]];
+	[imageLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxX relativeTo:@"superlayer" attribute:kCAConstraintMaxX]];
+	imageLayer.contents = (id)_placeholderRef;
+	imageLayer.name = @"image";
+//	imageLayer.contentsGravity = kCAGravityBottom;
+	[layer addSublayer:imageLayer];
 	
 	CALayer *reflectionLayer = [CALayer layer];
-	frame.origin.y = -frame.size.height;
-	[reflectionLayer setFrame:frame];
+	[reflectionLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"image" attribute:kCAConstraintMinY]];
+	[reflectionLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
+	[reflectionLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMinX]];
+	[reflectionLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxX relativeTo:@"superlayer" attribute:kCAConstraintMaxX]];
 	reflectionLayer.name = @"reflection";
 	reflectionLayer.transform = CATransform3DMakeScale(1, -1, 1);
 	reflectionLayer.contents = (id)_placeholderRef;
-	reflectionLayer.contentsGravity = kCAGravityResizeAspect;
-	[imageLayer addSublayer:reflectionLayer];
+	reflectionLayer.layoutManager = [CAConstraintLayoutManager layoutManager];
+//	reflectionLayer.contentsGravity = kCAGravityBottom;
+	[layer addSublayer:reflectionLayer];
 	
 	CALayer *gradientLayer = [CALayer layer];
-	frame.origin.y += frame.size.height;
-	frame.origin.x -= 1.0;
-	frame.size.height += 2.0;
-	frame.size.width += 2.0;
-	[gradientLayer setFrame:frame];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY]];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMinX]];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxX relativeTo:@"superlayer" attribute:kCAConstraintMaxX]];
 	[gradientLayer setContents:(id)_shadowImage];
-	gradientLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
 	[reflectionLayer addSublayer:gradientLayer];
 	
 	[_scrollLayer addSublayer:layer];
+	
+	if(drawBorderForDebug) {
+		imageLayer.borderWidth = 1;
+		imageLayer.borderColor = CGColorCreateGenericRGB(0, 255, 0, 1);
+		layer.borderWidth = 1;
+		layer.borderColor = CGColorCreateGenericRGB(255, 0, 0, 1);
+		reflectionLayer.borderWidth = 1;
+		reflectionLayer.borderColor = CGColorCreateGenericRGB(0, 0, 255, 1);
+		gradientLayer.borderWidth = 1.5;
+		gradientLayer.borderColor = CGColorCreateGenericRGB(255, 0, 255, 1);
+	}
 	
 	return layer;
 }
@@ -775,8 +827,8 @@ static NSString *MBCoverFlowViewImagePathContext;
 			[layer setValue:[NSNumber numberWithBool:YES] forKey:@"hasImage"];
 		}
 		
-		CALayer *imageLayer = [[layer sublayers] objectAtIndex:0];
-		CALayer *reflectionLayer = [[imageLayer sublayers] objectAtIndex:0];
+		CALayer *imageLayer = _imageLayerForItemLayer(layer);
+		CALayer *reflectionLayer = _reflectionLayerForItemLayer(layer);
 		
 		imageLayer.contents = (id)imageRef;
 		reflectionLayer.contents = (id)imageRef;
@@ -859,8 +911,8 @@ static NSString *MBCoverFlowViewImagePathContext;
 	// Update the placeholder for all necessary items
 	for (CALayer *layer in [_scrollLayer sublayers]) {
 		if (![[layer valueForKey:@"hasImage"] boolValue]) {
-			CALayer *imageLayer = [[self.layer sublayers] objectAtIndex:0];
-			CALayer *reflectionLayer = [[imageLayer sublayers] objectAtIndex:0];
+			CALayer *imageLayer = _imageLayerForItemLayer(self.layer);
+			CALayer *reflectionLayer = _reflectionLayerForItemLayer(self.layer);
 			imageLayer.contents = (id)_placeholderRef;
 			reflectionLayer.contents = (id)_placeholderRef;
 		}
@@ -894,51 +946,56 @@ static NSString *MBCoverFlowViewImagePathContext;
 
 - (void)layoutSublayersOfLayer:(CALayer *)layer
 {
-	float margin = floor(MBCoverFlowViewHorizontalMargin + ([layer bounds].size.width - [self itemSize].width * [[layer sublayers] count] - MBCoverFlowViewCellSpacing * ([[layer sublayers] count]-1)) * 0.5);
+	NSArray *sublayers = [layer sublayers];
+	NSSize currentItemSize = [self itemSize];
+	float margin = floor(MBCoverFlowViewHorizontalMargin + 
+						 ([layer bounds].size.width - 
+						  currentItemSize.width * [sublayers count] - 
+						  MBCoverFlowViewCellSpacing * ([sublayers count]-1)
+						  ) * 0.5
+						 );
 	
-	for (CALayer *sublayer in [layer sublayers]) {
-		CALayer *imageLayer = [[sublayer sublayers] objectAtIndex:0];
-		CALayer *reflectionLayer = [[imageLayer sublayers] objectAtIndex:0];
+	for (CALayer *sublayer in sublayers) {
+		CALayer *imageLayer = _imageLayerForItemLayer(sublayer);
+		CALayer *reflectionLayer = _reflectionLayerForItemLayer(sublayer);
 		
 		NSUInteger index = [[sublayer valueForKey:@"index"] integerValue];
 		CGRect frame;
-		frame.size = NSSizeToCGSize([self itemSize]);
-		frame.origin.x = margin + index * ([self itemSize].width + MBCoverFlowViewCellSpacing);
-		frame.origin.y = frame.size.height;
-		
-		CGRect imageFrame = frame;
-		imageFrame.origin = CGPointZero;
-		
-		CGRect reflectionFrame = imageFrame;
-		reflectionFrame.origin.y = -frame.size.height;
-		
-		CGRect gradientFrame = reflectionFrame;
-		gradientFrame.origin.y = 0;
+		frame.size = NSSizeToCGSize(currentItemSize);
+		frame.origin.x = margin + index * (currentItemSize.width + MBCoverFlowViewCellSpacing);
+		frame.origin.y =  _MBCoverFlowViewContainerMinY(self);
+		frame.size.height = currentItemSize.height * 2;
 		
 		// Create the perspective effect
 		if (index < self.selectionIndex) {
 			// Left
-			frame.origin.x += [self itemSize].width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(self.selectionIndex - index - MBCoverFlowViewPerspectiveRowScaleFactor);
+			sublayer.anchorPoint = CGPointMake(0, 0.8);
+			frame.origin.x += currentItemSize.width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(self.selectionIndex - index - MBCoverFlowViewPerspectiveRowScaleFactor);
 			imageLayer.transform = _leftTransform;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
+			reflectionLayer.transform = CATransform3DConcat(_leftTransform, CATransform3DMakeScale(1, -1, 1));
+			reflectionLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
 			sublayer.zPosition = MBCoverFlowViewPerspectiveSidePosition - 0.1 * (self.selectionIndex - index);
 		} else if (index > self.selectionIndex) {
 			// Right
-			frame.origin.x -= [self itemSize].width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(index - self.selectionIndex - MBCoverFlowViewPerspectiveRowScaleFactor);
+			sublayer.anchorPoint = CGPointMake(1, 0.7);
+			frame.origin.x -= currentItemSize.width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(index - self.selectionIndex - MBCoverFlowViewPerspectiveRowScaleFactor);
 			imageLayer.transform = _rightTransform;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
+			reflectionLayer.transform = CATransform3DConcat(_rightTransform, CATransform3DMakeScale(1, -1, 1));
+			reflectionLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
 			sublayer.zPosition = MBCoverFlowViewPerspectiveSidePosition - 0.1 * (index - self.selectionIndex);
 		} else {
 			// Center
 			imageLayer.transform = CATransform3DIdentity;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveCenterPosition;
+			reflectionLayer.transform = CATransform3DMakeScale(1, -1, 1);
+			reflectionLayer.zPosition = MBCoverFlowViewPerspectiveCenterPosition;
 			sublayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
+			sublayer.anchorPoint = CGPointMake(0.5, 0.5);
 		}
 		
 		[sublayer setFrame:frame];
-		[imageLayer setFrame:imageFrame];
-		[reflectionLayer setFrame:reflectionFrame];
-		[reflectionLayer setBounds:CGRectMake(0, 0, [reflectionLayer bounds].size.width, [reflectionLayer bounds].size.height)];
 	}
 }
 

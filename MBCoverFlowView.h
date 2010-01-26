@@ -41,7 +41,6 @@
 	CALayer *_containerLayer;
 	CALayer *_leftGradientLayer;
 	CALayer *_rightGradientLayer;
-	CALayer *_bottomGradientLayer;
 	
 	// Appearance
 	CGImageRef _shadowImage;

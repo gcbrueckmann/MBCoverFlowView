@@ -43,6 +43,7 @@ const float MBCoverFlowViewHorizontalMargin = 12.0;
 // #define MBCoverFlowViewContainerMinY (self.accessoryController?NSMaxY([self.accessoryController.view frame]):0.0 - 3.0*[self itemSize].height/4.0)
 static inline CGFloat _MBCoverFlowViewContainerMinY(MBCoverFlowView *view);
 #define MBCoverFlowViewContainerMinY _MBCoverFlowViewContainerMinY(self)
+const float MBCoverFlowAnchorPointY = 0.75;
 
 const float MBCoverFlowScrollerHorizontalMargin = 80.0;
 const float MBCoverFlowScrollerVerticalSpacing = 16.0;
@@ -57,7 +58,7 @@ const float MBCoverFlowViewPerspectiveCenterPosition = 100.0;
 const float MBCoverFlowViewPerspectiveSidePosition = 0.0;
 const float MBCoverFlowViewPerspectiveSideSpacingFactor = 0.75;
 const float MBCoverFlowViewPerspectiveRowScaleFactor = 0.85;
-const float MBCoverFlowViewPerspectiveAngle = 0.7;//0.79;
+const float MBCoverFlowViewPerspectiveAngle = 0.79;
 
 // KVO
 static NSString *MBCoverFlowViewImagePathContext;
@@ -144,7 +145,7 @@ static BOOL drawBorderForDebug = NO;
 		_containerLayer.name = @"body";
 		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMidX relativeTo:@"superlayer" attribute:kCAConstraintMidX]];
 		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintWidth relativeTo:@"superlayer" attribute:kCAConstraintWidth offset:-20]];
-		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY offset:10]];
+		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
 		[_containerLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY offset:-10]];
 		// add by masakih
 		if(drawBorderForDebug) {
@@ -188,7 +189,6 @@ static BOOL drawBorderForDebug = NO;
 		CALayer *maskLayer = [CALayer layer];
 		_leftGradientLayer = [CALayer layer];
 		_rightGradientLayer = [CALayer layer];
-		_bottomGradientLayer = [CALayer layer];
 		
 		// left
 		gradientRect.origin = CGPointZero;
@@ -226,27 +226,7 @@ static BOOL drawBorderForDebug = NO;
 		CGContextRelease(context);
 		CGImageRelease(gradientImage);
 		free(bitmapData);
-		
-		// bottom
-		gradientRect.size.width = [self frame].size.width;
-		gradientRect.size.height = 32;
-		bytesPerRow = 4*gradientRect.size.width;
-		bitmapData = malloc(bytesPerRow * gradientRect.size.height);
-		context = CGBitmapContextCreate(bitmapData, gradientRect.size.width,
-										gradientRect.size.height, 8,  bytesPerRow, 
-										CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB), kCGImageAlphaPremultipliedFirst);
-		nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:YES];
-		[NSGraphicsContext saveGraphicsState];
-		[NSGraphicsContext setCurrentContext:nsContext];
-		[gradient drawInRect:NSMakeRect(0, 0, gradientRect.size.width, gradientRect.size.height) angle:90];
-		[NSGraphicsContext restoreGraphicsState];
-		gradientImage = CGBitmapContextCreateImage(context);
-		_bottomGradientLayer.contents = (id)gradientImage;
-		CGContextRelease(context);
-		CGImageRelease(gradientImage);
-		free(bitmapData);
-		[gradient release];
-		
+				
 		// the autoresizing mask allows it to change shape with the parent layer
 		maskLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
 		maskLayer.layoutManager = [CAConstraintLayoutManager layoutManager];
@@ -258,16 +238,9 @@ static BOOL drawBorderForDebug = NO;
 		[_rightGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
 		[_rightGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY]];
 		[_rightGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMaxX scale:.5 offset:[self itemSize].width / 2]];
-		[_bottomGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxX relativeTo:@"superlayer" attribute:kCAConstraintMaxX]];
-		[_bottomGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
-		[_bottomGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMinX]];
-		[_bottomGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMinY offset:32]];
-		
-		_bottomGradientLayer.masksToBounds = YES;
 		
 		[maskLayer addSublayer:_rightGradientLayer];
 		[maskLayer addSublayer:_leftGradientLayer];
-		[maskLayer addSublayer:_bottomGradientLayer];
 		// we make it a sublayer rather than a mask so that the overlapping alpha will work correctly
 		// without the use of a compositing filter
 		[_containerLayer addSublayer:maskLayer];
@@ -362,7 +335,6 @@ static BOOL drawBorderForDebug = NO;
 
 - (void)viewWillMoveToSuperview:(NSView *)newSuperview
 {
-//	[self resizeSubviewsWithOldSize:[self frame].size];
 	[self recalcSubviewSize];
 }
 
@@ -372,7 +344,6 @@ static BOOL drawBorderForDebug = NO;
 //	[self recalcSubviewSize];
 	self.selectionIndex = self.selectionIndex;
 }
-//- (void)resizeSubviewsWithOldSize:(NSSize)oldSize
 - (void)recalcSubviewSize
 {
 	float accessoryY = MBCoverFlowScrollerVerticalSpacing;
@@ -491,7 +462,6 @@ static BOOL drawBorderForDebug = NO;
 - (void)setAutoresizesItems:(BOOL)flag
 {
 	_autoresizesItems = flag;
-//	[self resizeSubviewsWithOldSize:[self frame].size];
 	[self recalcSubviewSize];
 }
 
@@ -563,7 +533,6 @@ static BOOL drawBorderForDebug = NO;
 {
 	_showsScrollbar = flag;
 	[_scroller setHidden:!flag];
-//	[self resizeSubviewsWithOldSize:[self frame].size];
 	[self recalcSubviewSize];
 }
 
@@ -589,7 +558,6 @@ static BOOL drawBorderForDebug = NO;
 		[self.accessoryController bind:@"representedObject" toObject:self withKeyPath:@"selectedObject" options:nil];
 	}
 	
-//	[self resizeSubviewsWithOldSize:[self frame].size];
 	[self recalcSubviewSize];
 }
 
@@ -687,7 +655,8 @@ static BOOL drawBorderForDebug = NO;
 // add by masakih
 static inline CGFloat _MBCoverFlowViewContainerMinY(MBCoverFlowView *aView)
 {
-	CGFloat result = -[aView itemSize].height + MBCoverFlowViewBottomMargin;
+	// hummm. what is this?
+	CGFloat result = -[aView itemSize].height * MBCoverFlowAnchorPointY + MBCoverFlowViewBottomMargin;
 	if(aView.accessoryController) {
 		result += [aView.accessoryController.view frame].size.height;
 	}
@@ -970,7 +939,7 @@ static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer)
 		// Create the perspective effect
 		if (index < self.selectionIndex) {
 			// Left
-			sublayer.anchorPoint = CGPointMake(0, 0.5);
+			sublayer.anchorPoint = CGPointMake(0, MBCoverFlowAnchorPointY);
 			frame.origin.x += currentItemSize.width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(self.selectionIndex - index - MBCoverFlowViewPerspectiveRowScaleFactor);
 			imageLayer.transform = _leftTransform;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
@@ -979,7 +948,7 @@ static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer)
 			sublayer.zPosition = MBCoverFlowViewPerspectiveSidePosition - 0.1 * (self.selectionIndex - index);
 		} else if (index > self.selectionIndex) {
 			// Right
-			sublayer.anchorPoint = CGPointMake(1, 0.5);
+			sublayer.anchorPoint = CGPointMake(1, MBCoverFlowAnchorPointY);
 			frame.origin.x -= currentItemSize.width * MBCoverFlowViewPerspectiveSideSpacingFactor * (float)(index - self.selectionIndex - MBCoverFlowViewPerspectiveRowScaleFactor);
 			imageLayer.transform = _rightTransform;
 			imageLayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
@@ -993,7 +962,7 @@ static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer)
 			reflectionLayer.transform = CATransform3DMakeScale(1, -1, 1);
 			reflectionLayer.zPosition = MBCoverFlowViewPerspectiveCenterPosition;
 			sublayer.zPosition = MBCoverFlowViewPerspectiveSidePosition;
-			sublayer.anchorPoint = CGPointMake(0.5, 0.5);
+			sublayer.anchorPoint = CGPointMake(0.5, MBCoverFlowAnchorPointY);
 		}
 		
 		[sublayer setFrame:frame];

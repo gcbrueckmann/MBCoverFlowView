@@ -70,12 +70,13 @@
 	NSMutableArray *images = [NSMutableArray array];
 	
 	NSString *file;
-	NSDirectoryEnumerator *dirEnum = [[NSFileManager defaultManager] enumeratorAtPath:@"/Library/Desktop Pictures/Nature"];
+	NSString *folder = @"/Library/Desktop Pictures/Nature";
+	NSDirectoryEnumerator *dirEnum = [[NSFileManager defaultManager] enumeratorAtPath:folder];
 	
 	int count = 0;
 	while ((file = [dirEnum nextObject])) 
 	{
-		NSImage *image = [[NSImage alloc] initWithContentsOfFile:[@"/Library/Desktop Pictures/Nature" stringByAppendingPathComponent:file]];
+		NSImage *image = [[NSImage alloc] initWithContentsOfFile:[folder stringByAppendingPathComponent:file]];
 		if (image != nil) {
 			// Scale down the image -- CoreAnimation doesn't like huge images
 			[image setSize:NSMakeSize([image size].width/2, [image size].height/2)];

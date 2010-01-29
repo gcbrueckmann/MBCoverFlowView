@@ -170,6 +170,22 @@ static BOOL drawBorderForDebug = NO;
 			_shadowGradient = [[NSGradient alloc] initWithStartingColor:[NSColor colorWithDeviceWhite:0 alpha:0.6]
 															endingColor:[NSColor colorWithDeviceWhite:0 alpha:1.0]];
 		}
+		CGRect gradientRect;
+		gradientRect.origin = CGPointZero;
+		gradientRect.size = NSSizeToCGSize([self itemSize]);
+		size_t bytesPerRow = 4*gradientRect.size.width;
+		void* bitmapData = malloc(bytesPerRow * gradientRect.size.height);
+		CGContextRef context = CGBitmapContextCreate(bitmapData, gradientRect.size.width,
+													 gradientRect.size.height, 8,  bytesPerRow, 
+													 CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB), kCGImageAlphaPremultipliedFirst);
+		NSGraphicsContext *nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:YES];
+		[NSGraphicsContext saveGraphicsState];
+		[NSGraphicsContext setCurrentContext:nsContext];
+		[_shadowGradient drawInRect:NSMakeRect(0, 0, gradientRect.size.width, gradientRect.size.height) angle:90];
+		[NSGraphicsContext restoreGraphicsState];
+		_shadowImage = CGBitmapContextCreateImage(context);
+		CGContextRelease(context);
+		free(bitmapData);
 		
 		/* create a pleasant gradient mask around our central layer.
 		 We don't have to worry about re-creating these when the window
@@ -181,17 +197,17 @@ static BOOL drawBorderForDebug = NO;
 		_rightGradientLayer = [CALayer layer];
 		
 		// left
-		CGRect gradientRect;
+		gradientRect;
 		gradientRect.origin = CGPointZero;
 		gradientRect.size.width = [self frame].size.width;
 		gradientRect.size.height = [self frame].size.height;
-		size_t bytesPerRow = 4*gradientRect.size.width;
-		void *bitmapData = malloc(bytesPerRow * gradientRect.size.height);
-		CGContextRef context = CGBitmapContextCreate(bitmapData, gradientRect.size.width,
+		bytesPerRow = 4*gradientRect.size.width;
+		bitmapData = malloc(bytesPerRow * gradientRect.size.height);
+		context = CGBitmapContextCreate(bitmapData, gradientRect.size.width,
 										gradientRect.size.height, 8,  bytesPerRow, 
 										CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB), kCGImageAlphaPremultipliedFirst);
 		NSGradient *gradient = [[NSGradient alloc] initWithStartingColor:[NSColor colorWithDeviceWhite:0. alpha:1.] endingColor:[NSColor colorWithDeviceWhite:0. alpha:0]];
-		NSGraphicsContext *nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:YES];
+		nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:YES];
 		[NSGraphicsContext saveGraphicsState];
 		[NSGraphicsContext setCurrentContext:nsContext];
 		[gradient drawInRect:NSMakeRect(0, 0, gradientRect.size.width, gradientRect.size.height) angle:0];
@@ -720,11 +736,12 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	CGImageRelease(cgImage);
 	
 	// create reflection image
-	[_shadowGradient drawInRect:NSMakeRect(0, 0, canvasWidth, imageHeight) angle:90];
-	CGImageRef cgShadowImage = CGBitmapContextCreateImage(context);
+//	[_shadowGradient drawInRect:NSMakeRect(0, 0, canvasWidth, imageHeight) angle:90];
+//	CGImageRef cgShadowImage = CGBitmapContextCreateImage(context);
 	CALayer *reflectionLayer = _reflectionLayerForItemLayer(layer);
-	reflectionLayer.contents = (id)cgShadowImage;
-	CGImageRelease(cgShadowImage);
+//	reflectionLayer.contents = (id)cgShadowImage;
+	reflectionLayer.contents = (id)cgImage;
+//	CGImageRelease(cgShadowImage);
 	
 	[NSGraphicsContext restoreGraphicsState];
 	CGContextRelease(context);
@@ -769,7 +786,16 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	reflectionLayer.name = @"reflection";
 	reflectionLayer.transform = CATransform3DMakeScale(1, -1, 1);
 	reflectionLayer.contents = (id)_placeholderRef;
+	reflectionLayer.layoutManager = [CAConstraintLayoutManager layoutManager];
 	[layer addSublayer:reflectionLayer];
+	
+	CALayer *gradientLayer = [CALayer layer];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY]];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMinX]];
+	[gradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxX relativeTo:@"superlayer" attribute:kCAConstraintMaxX]];
+	[gradientLayer setContents:(id)_shadowImage];
+	[reflectionLayer addSublayer:gradientLayer];
 	
 	[_scrollLayer addSublayer:layer];
 	
@@ -780,6 +806,8 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 		layer.borderColor = CGColorCreateGenericRGB(255, 0, 0, 1);
 		reflectionLayer.borderWidth = 1;
 		reflectionLayer.borderColor = CGColorCreateGenericRGB(0, 0, 255, 1);
+		gradientLayer.borderWidth = 1.5;
+		gradientLayer.borderColor = CGColorCreateGenericRGB(255, 0, 255, 1);
 	}
 	
 	return layer;

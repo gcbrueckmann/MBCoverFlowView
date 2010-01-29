@@ -70,7 +70,9 @@
 	NSMutableArray *images = [NSMutableArray array];
 	
 	NSString *file;
-	NSString *folder = @"/Library/Desktop Pictures/Nature";
+//	NSString *folder = @"/Library/Desktop Pictures/Nature";
+	NSString *folder = @"/Users/masaki/Pictures";
+
 	NSDirectoryEnumerator *dirEnum = [[NSFileManager defaultManager] enumeratorAtPath:folder];
 	
 	int count = 0;

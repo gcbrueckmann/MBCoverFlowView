@@ -321,8 +321,8 @@ static BOOL drawBorderForDebug = NO;
 			[self _setSelectionIndex:(self.selectionIndex + 1)];
 			break;
 		case MBReturnKeyCode:
-			if (self.target && self.action) {
-				[self.target performSelector:self.action withObject:self];
+			if (self.action) {
+				[NSApp sendAction:self.action to:self.target from:self];
 				break;
 			}
 		default:
@@ -333,8 +333,8 @@ static BOOL drawBorderForDebug = NO;
 
 - (void)mouseDown:(NSEvent *)theEvent
 {
-	if ([theEvent clickCount] == 2 && self.target && self.action) {
-		[self.target performSelector:self.action withObject:self];
+	if ([theEvent clickCount] == 2 && self.action) {
+		[NSApp sendAction:self.action to:self.target from:self];
 	}
 	
 	NSPoint mouseLocation = [self convertPoint:[theEvent locationInWindow] fromView:nil];

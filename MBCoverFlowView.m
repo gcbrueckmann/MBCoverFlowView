@@ -31,6 +31,19 @@
 
 #import <QuartzCore/QuartzCore.h>
 
+
+// Private class. add by masakih
+/* This layer never hit by -[CALyer hitTest:].
+ */
+@interface MBNeverHitLayer : CALayer
+@end
+@implementation MBNeverHitLayer
+- (BOOL)containsPoint:(CGPoint)p
+{
+	return FALSE;
+}
+@end
+
 // Constants
 #define MBCoverFlowViewCellSpacing ([self itemSize].width/10.0)
 
@@ -121,8 +134,6 @@ static BOOL drawBorderForDebug = NO;
 		
 		_autoresizesItems = YES;
 		
-		[self setAutoresizesSubviews:YES];
-		
 		// Create the scroller
 		_scroller = [[MBCoverFlowScroller alloc] initWithFrame:NSMakeRect(10, 10, 400, 16)];
 		[_scroller setEnabled:YES];
@@ -130,7 +141,7 @@ static BOOL drawBorderForDebug = NO;
 		[_scroller setHidden:YES];
 		[_scroller setKnobProportion:1.0];
 		[_scroller setAction:@selector(_scrollerChange:)];
-		[self addSubview:_scroller];
+		
 		// add by masakih
 		[_scroller setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
 		[self addSubview:_scroller];
@@ -266,6 +277,7 @@ static BOOL drawBorderForDebug = NO;
 	self.imageKeyPath = nil;
 	self.placeholderIcon = nil;
 	CGImageRelease(_placeholderRef);
+	CGImageRelease(_shadowImage);
 	[_imageLoadQueue release];
 	_imageLoadQueue = nil;
 	[super dealloc];
@@ -614,29 +626,18 @@ static BOOL drawBorderForDebug = NO;
 
 - (NSInteger)indexOfItemAtPoint:(NSPoint)aPoint
 {
-	// Check the selected item first
-	if (NSPointInRect(aPoint, [self rectForItemAtIndex:self.selectionIndex])) {
-		return self.selectionIndex;
-	}
-	
-	// Check the items to the left, in descending order
-	NSInteger index = self.selectionIndex-1;
-	while (index >= 0) {
-		NSRect layerRect = [self rectForItemAtIndex:index];
-		if (NSPointInRect(aPoint, layerRect)) {
-			return index;
+	CGPoint scrollerPoint = [_scrollLayer.superlayer convertPoint:NSPointToCGPoint(aPoint) fromLayer:self.layer];
+	CALayer *hit = [_scrollLayer hitTest:scrollerPoint];
+	if(hit) {
+		NSString *name = hit.name;
+		CALayer *itemLayer = nil;
+		if([name isEqualToString:@"image"]) {
+			itemLayer = hit.superlayer;
 		}
-		index--;
-	}
-	
-	// Check the items to the right, in ascending order
-	index = self.selectionIndex+1;
-	while (index < [self.content count]) {
-		NSRect layerRect = [self rectForItemAtIndex:index];
-		if (NSPointInRect(aPoint, layerRect)) {
-			return index;
+		if(itemLayer) {
+			id object = [itemLayer valueForKey:@"representedObject"];
+			return [self.content indexOfObject:object];
 		}
-		index++;
 	}
 	
 	return NSNotFound;
@@ -731,19 +732,15 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	NSRectFill(NSMakeRect(0, 0, canvasWidth, canvasHeight));
 	[image drawInRect:NSMakeRect(targetLeft,0, imageWidth, imageHeight) fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
 	CGImageRef cgImage = CGBitmapContextCreateImage(context);
+	[NSGraphicsContext restoreGraphicsState];
+	
 	CALayer *imageLayer = _imageLayerForItemLayer(layer);
 	imageLayer.contents = (id)cgImage;
-	CGImageRelease(cgImage);
 	
-	// create reflection image
-//	[_shadowGradient drawInRect:NSMakeRect(0, 0, canvasWidth, imageHeight) angle:90];
-//	CGImageRef cgShadowImage = CGBitmapContextCreateImage(context);
 	CALayer *reflectionLayer = _reflectionLayerForItemLayer(layer);
-//	reflectionLayer.contents = (id)cgShadowImage;
 	reflectionLayer.contents = (id)cgImage;
-//	CGImageRelease(cgShadowImage);
 	
-	[NSGraphicsContext restoreGraphicsState];
+	CGImageRelease(cgImage);
 	CGContextRelease(context);
 	free(bitmapData);
 	
@@ -758,7 +755,7 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	CATransform3D sublayerTransform = CATransform3DIdentity; 
 	sublayerTransform.m34 = 1. / -zDistance;
 	
-	CALayer *layer = [CALayer layer];
+	CALayer *layer = [MBNeverHitLayer layer];
 	CGRect frame;
 	frame.origin = CGPointZero;
 	frame.size = NSSizeToCGSize([self itemSize]);
@@ -767,7 +764,7 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	[layer setValue:[NSNumber numberWithInteger:[[_scrollLayer sublayers] count]] forKey:@"index"];
 	[layer setSublayerTransform:sublayerTransform];
 	[layer setValue:[NSNumber numberWithBool:NO] forKey:@"hasImage"];
-	layer.layoutManager = [CAConstraintLayoutManager layoutManager];	
+	layer.layoutManager = [CAConstraintLayoutManager layoutManager];
 	
 	CALayer *imageLayer = [CALayer layer];
 	[imageLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMidY]];
@@ -946,8 +943,8 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	// Update the placeholder for all necessary items
 	for (CALayer *layer in [_scrollLayer sublayers]) {
 		if (![[layer valueForKey:@"hasImage"] boolValue]) {
-			CALayer *imageLayer = _imageLayerForItemLayer(self.layer);
-			CALayer *reflectionLayer = _reflectionLayerForItemLayer(self.layer);
+			CALayer *imageLayer = _imageLayerForItemLayer(layer);
+			CALayer *reflectionLayer = _reflectionLayerForItemLayer(layer);
 			imageLayer.contents = (id)_placeholderRef;
 			reflectionLayer.contents = (id)_placeholderRef;
 		}

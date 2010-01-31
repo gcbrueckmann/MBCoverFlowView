@@ -762,6 +762,8 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	[_rightGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinY relativeTo:@"superlayer" attribute:kCAConstraintMinY]];
 	[_rightGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMaxY relativeTo:@"superlayer" attribute:kCAConstraintMaxY]];
 	[_rightGradientLayer addConstraint:[CAConstraint constraintWithAttribute:kCAConstraintMinX relativeTo:@"superlayer" attribute:kCAConstraintMaxX scale:.5 offset:[self itemSize].width / 2]];
+	
+	[_containerLayer layoutSublayers];
 }
 - (CALayer *)_insertLayerInScrollLayer
 {
@@ -1044,6 +1046,8 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 		}
 		
 		[sublayer setFrame:frame];
+		[sublayer layoutSublayers];
+		[reflectionLayer layoutSublayers];
 	}
 }
 

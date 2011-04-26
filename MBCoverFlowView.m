@@ -101,9 +101,9 @@ static NSGradient *_shadowGradient = nil;
 static inline CALayer *_imageLayerForItemLayer(CALayer *itemLayer);
 static inline CALayer *_reflectionLayerForItemLayer(CALayer *itemLayer);
 
-static BOOL drawBorderForDebug = NO;
 @end
 
+static BOOL drawBorderForDebug;
 
 @implementation MBCoverFlowView
 
@@ -125,7 +125,8 @@ static BOOL drawBorderForDebug = NO;
 
 - (id)initWithFrame:(NSRect)frameRect
 {
-	if (self = [super initWithFrame:frameRect]) {
+	if ((self = [super initWithFrame:frameRect])) {
+        drawBorderForDebug = NO;
 		_bindingInfo = [[NSMutableDictionary alloc] init];
 		
 		_imageLoadQueue = [[NSOperationQueue alloc] init];
@@ -211,7 +212,6 @@ static BOOL drawBorderForDebug = NO;
 		_rightGradientLayer = [CALayer layer];
 		
 		// left
-		gradientRect;
 		gradientRect.origin = CGPointZero;
 		gradientRect.size.width = [self frame].size.width;
 		gradientRect.size.height = [self frame].size.height;

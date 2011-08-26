@@ -868,6 +868,10 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 
 - (void)_loadImageForLayer:(CALayer *)layer
 {
+	if (![NSThread isMainThread]) {
+		[self performSelectorOnMainThread:_cmd withObject:layer waitUntilDone:YES];
+		return;
+	}
 	@try {
 		NSImage *image;
 		NSObject *object = [layer valueForKey:@"representedObject"];

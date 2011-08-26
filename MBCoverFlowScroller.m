@@ -147,7 +147,11 @@ const float MBCoverFlowScrollerKnobMinimumWidth = 30.0;
 
 - (void)setIntegerValue:(NSInteger)value
 {
-	[self setFloatValue:((float)value / (float)self.numberOfIncrements)+0.01];
+	if (!self.numberOfIncrements) {
+		[self setFloatValue:0.0f];
+	} else {
+		[self setFloatValue:((float)value / (float)self.numberOfIncrements)+0.01];
+	}
 }
 
 - (void)setNumberOfIncrements:(NSUInteger)newIncrements

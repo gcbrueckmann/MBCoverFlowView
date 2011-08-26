@@ -128,10 +128,7 @@ static BOOL drawBorderForDebug;
 	if ((self = [super initWithFrame:frameRect])) {
         drawBorderForDebug = NO;
 		_bindingInfo = [[NSMutableDictionary alloc] init];
-		
-		_imageLoadQueue = [[NSOperationQueue alloc] init];
-		[_imageLoadQueue setMaxConcurrentOperationCount:1];
-		
+				
 		_placeholderIcon = [[NSImage imageNamed:NSImageNameQuickLookTemplate] retain];
 		
 		_autoresizesItems = YES;
@@ -288,9 +285,15 @@ static BOOL drawBorderForDebug;
 	self.placeholderIcon = nil;
 	CGImageRelease(_placeholderRef);
 	CGImageRelease(_shadowImage);
-	[_imageLoadQueue release];
-	_imageLoadQueue = nil;
 	[super dealloc];
+}
+
+- (void)viewDidMoveToWindow
+{
+	[super viewDidMoveToWindow];
+	if (!self.window) {
+		[[NSRunLoop mainRunLoop] cancelPerformSelectorsWithTarget:self];
+	}
 }
 
 - (void)awakeFromNib
@@ -466,7 +469,7 @@ static BOOL drawBorderForDebug;
 	}
 	
 	[_scroller setNumberOfIncrements:fmax([self.content count]-1, 0)];
-	self.selectionIndex = self.selectionIndex;
+	self.selectionIndex = MIN(self.selectionIndex, newContents.count - 1);
 }
 
 - (void)setImageKeyPath:(NSString *)keyPath
@@ -860,18 +863,12 @@ static BOOL _setContentImageAdjustedSizeToItemLayer(NSImage *image, NSSize size,
 	[layer setValue:[NSNumber numberWithInteger:index] forKey:@"index"];
 	[layer setValue:[NSNumber numberWithBool:NO] forKey:@"hasImage"];
 	
-	// Create the operation
-	NSInvocationOperation *operation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(_loadImageForLayer:) object:layer];
-	[_imageLoadQueue addOperation:operation];
-	[operation release];
+	[[NSRunLoop mainRunLoop] cancelPerformSelector:@selector(_loadImageForLayer:) target:self argument:layer];
+	[[NSRunLoop mainRunLoop] performSelector:@selector(_loadImageForLayer:) target:self argument:layer order:0 modes:[NSArray arrayWithObject:NSRunLoopCommonModes]];
 }
 
 - (void)_loadImageForLayer:(CALayer *)layer
 {
-	if (![NSThread isMainThread]) {
-		[self performSelectorOnMainThread:_cmd withObject:layer waitUntilDone:YES];
-		return;
-	}
 	@try {
 		NSImage *image;
 		NSObject *object = [layer valueForKey:@"representedObject"];

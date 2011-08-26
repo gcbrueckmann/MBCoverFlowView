@@ -59,7 +59,6 @@
 	// Data
 	NSArray *_content;
 	NSString *_imageKeyPath;
-	NSOperationQueue *_imageLoadQueue;
 	
 	// Bindings
 	NSMutableDictionary *_bindingInfo;

@@ -133,6 +133,8 @@ static BOOL drawBorderForDebug;
 		
 		_autoresizesItems = YES;
 		
+		_selectionIndex = NSNotFound;
+		
 		// Create the scroller
 		_scroller = [[MBCoverFlowScroller alloc] initWithFrame:NSMakeRect(10, 10, 400, 16)];
 		[_scroller setEnabled:YES];
@@ -372,16 +374,11 @@ static BOOL drawBorderForDebug;
 
 #pragma mark NSView
 
-- (void)viewWillMoveToSuperview:(NSView *)newSuperview
-{
-	[self recalcSubviewSize];
-}
-
 - (void)setFrame:(NSRect)newFrame
 {
 	[super setFrame:newFrame];
 	[self _updateMaskConstraint];
-//	[self recalcSubviewSize];
+	[self recalcSubviewSize];
 	self.selectionIndex = self.selectionIndex;
 }
 - (void)recalcSubviewSize
@@ -469,7 +466,11 @@ static BOOL drawBorderForDebug;
 	}
 	
 	[_scroller setNumberOfIncrements:fmax([self.content count]-1, 0)];
-	self.selectionIndex = MIN(self.selectionIndex, newContents.count - 1);
+	if (newContents.count) {
+		self.selectionIndex = MIN(self.selectionIndex, newContents.count - 1);
+	} else {
+		self.selectionIndex = NSNotFound;
+	}
 }
 
 - (void)setImageKeyPath:(NSString *)keyPath
@@ -600,10 +601,14 @@ static BOOL drawBorderForDebug;
 		return;
 	}
 	
-	if ([[NSApp currentEvent] modifierFlags] & (NSAlphaShiftKeyMask|NSShiftKeyMask))
-		[CATransaction setValue:[NSNumber numberWithFloat:2.1f] forKey:@"animationDuration"];
-	else
-		[CATransaction setValue:[NSNumber numberWithFloat:0.7f] forKey:@"animationDuration"];
+	if (!self.window) {
+		[CATransaction setValue:[NSNumber numberWithFloat:0.0f] forKey:@"animationDuration"];
+	} else {
+		if ([[NSApp currentEvent] modifierFlags] & (NSAlphaShiftKeyMask|NSShiftKeyMask))
+			[CATransaction setValue:[NSNumber numberWithFloat:2.1f] forKey:@"animationDuration"];
+		else
+			[CATransaction setValue:[NSNumber numberWithFloat:0.7f] forKey:@"animationDuration"];
+	}
 	
 	_selectionIndex = newIndex;
 	[_scrollLayer layoutIfNeeded];
